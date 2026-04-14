@@ -14,7 +14,7 @@ Select text in Gmail, Slack, a browser, an editor, or a document. A compact floa
 
 ## 🎬 Demo
 
-<video src="assets/demo.mp4" controls muted playsinline width="100%"></video>
+![WritingAssistant demo](assets/demo.gif)
 
 [Download the demo video](assets/demo.mp4)
 
