@@ -5,10 +5,91 @@ private final class FloatingPanelWindow: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+private final class DraftInputTextView: NSTextView {
+    var placeholderString: String = "Write anything..." {
+        didSet { needsDisplay = true }
+    }
+
+    override var string: String {
+        didSet { needsDisplay = true }
+    }
+
+    override func didChangeText() {
+        super.didChangeText()
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+
+        guard string.isEmpty else { return }
+        let font = self.font ?? .systemFont(ofSize: NSFont.systemFontSize)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: NSColor.placeholderTextColor,
+            .paragraphStyle: paragraph
+        ]
+        let origin = NSPoint(x: textContainerInset.width + 2, y: textContainerInset.height + 1)
+        (placeholderString as NSString).draw(at: origin, withAttributes: attributes)
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.type == .keyDown else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags == .command || flags == [.command, .shift] else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        guard let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return super.performKeyEquivalent(with: event)
+        }
+
+        let fullTextRange = NSRange(location: 0, length: (string as NSString).length)
+        switch key {
+        case "a":
+            setSelectedRange(fullTextRange)
+            return true
+        case "c":
+            copy(nil)
+            return true
+        case "x":
+            cut(nil)
+            return true
+        case "v":
+            paste(nil)
+            return true
+        case "z":
+            if flags.contains(.shift) {
+                undoManager?.redo()
+            } else {
+                undoManager?.undo()
+            }
+            return true
+        default:
+            return super.performKeyEquivalent(with: event)
+        }
+    }
+}
+
 final class FloatingActionPanel: NSObject {
+    private let maxVisibleDraftLines: CGFloat = 4
     private let panel: NSPanel
-    private let draftField = NSTextField()
+    private let draftTextView = DraftInputTextView()
+    private let draftScrollView = NSScrollView()
     private var displayedActions: [RewriteAction] = []
+    private var panelPadding: CGFloat = 0
+    private var panelSpacing: CGFloat = 0
+    private var basePanelWidth: CGFloat = 0
+    private var basePanelHeight: CGFloat = 0
+    private var draftButtonWidth: CGFloat = 0
+    private var minimumDraftFieldWidth: CGFloat = 0
+    private var baseDraftFieldHeight: CGFloat = 0
+    private var draftFieldHeightConstraint: NSLayoutConstraint?
 
     var onAction: ((RewriteAction) -> Void)?
     var onDraftRequest: ((String) -> Void)?
@@ -77,7 +158,7 @@ final class FloatingActionPanel: NSObject {
         panel.orderFrontRegardless()
         if focusDraftField {
             panel.makeKey()
-            panel.makeFirstResponder(draftField)
+            panel.makeFirstResponder(draftTextView)
         }
     }
 
@@ -108,6 +189,15 @@ final class FloatingActionPanel: NSObject {
         let width = max(260.0 * scale, buttonRowWidth + (padding * 2))
         let draftHeight = 26.0 * scale
         let height = draftHeight + buttonHeight + (padding * 3) + spacing
+        let sendButtonWidth = max(34.0, 36.0 * scale)
+
+        panelPadding = padding
+        panelSpacing = spacing
+        basePanelWidth = width
+        basePanelHeight = height
+        draftButtonWidth = sendButtonWidth
+        minimumDraftFieldWidth = max(140.0 * scale, width - (padding * 2) - spacing - sendButtonWidth)
+        baseDraftFieldHeight = draftHeight
 
         panel.setContentSize(NSSize(width: width, height: height))
 
@@ -148,12 +238,12 @@ final class FloatingActionPanel: NSObject {
         }
         draftButton.toolTip = "Generate and insert draft"
         configureButton(draftButton)
-        draftButton.widthAnchor.constraint(equalToConstant: max(34.0, 36.0 * scale)).isActive = true
+        draftButton.widthAnchor.constraint(equalToConstant: sendButtonWidth).isActive = true
         draftButton.heightAnchor.constraint(equalToConstant: draftHeight).isActive = true
 
-        configureDraftField(scale: scale)
+        configureDraftField(scale: scale, height: draftHeight)
 
-        let draftRow = NSStackView(views: [draftField, draftButton])
+        let draftRow = NSStackView(views: [draftScrollView, draftButton])
         draftRow.orientation = .horizontal
         draftRow.spacing = spacing
         draftRow.alignment = .centerY
@@ -174,9 +264,12 @@ final class FloatingActionPanel: NSObject {
             contentStack.topAnchor.constraint(equalTo: effectView.topAnchor, constant: padding),
             contentStack.bottomAnchor.constraint(equalTo: effectView.bottomAnchor, constant: -padding),
             draftRow.widthAnchor.constraint(equalTo: contentStack.widthAnchor),
-            stackView.centerXAnchor.constraint(equalTo: contentStack.centerXAnchor),
-            draftField.heightAnchor.constraint(equalToConstant: draftHeight)
+            stackView.centerXAnchor.constraint(equalTo: contentStack.centerXAnchor)
         ])
+        draftFieldHeightConstraint = draftScrollView.heightAnchor.constraint(equalToConstant: draftHeight)
+        draftFieldHeightConstraint?.isActive = true
+
+        updatePanelSizeForDraftText()
     }
 
     private func configureButton(_ button: NSButton) {
@@ -185,15 +278,40 @@ final class FloatingActionPanel: NSObject {
         button.font = .systemFont(ofSize: max(10.0, 11.0 * AppSettings.shared.popupTuning.popupScale), weight: .medium)
     }
 
-    private func configureDraftField(scale: Double) {
-        draftField.placeholderString = "Write anything..."
-        draftField.font = .systemFont(ofSize: max(11.0, 12.0 * scale))
-        draftField.lineBreakMode = .byTruncatingTail
-        draftField.delegate = self
-        draftField.target = self
-        draftField.action = #selector(runDraft)
-        draftField.bezelStyle = .roundedBezel
-        draftField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+    private func configureDraftField(scale: Double, height: CGFloat) {
+        draftTextView.placeholderString = "Write anything..."
+        draftTextView.font = .systemFont(ofSize: max(11.0, 12.0 * scale))
+        draftTextView.textColor = .labelColor
+        draftTextView.drawsBackground = false
+        draftTextView.isEditable = true
+        draftTextView.isSelectable = true
+        draftTextView.isRichText = false
+        draftTextView.importsGraphics = false
+        draftTextView.allowsUndo = true
+        draftTextView.delegate = self
+        draftTextView.isHorizontallyResizable = false
+        draftTextView.isVerticallyResizable = true
+        draftTextView.autoresizingMask = [.width]
+        draftTextView.textContainerInset = NSSize(width: 4.0 * scale, height: 4.0 * scale)
+        draftTextView.textContainer?.lineFragmentPadding = 0
+        draftTextView.textContainer?.widthTracksTextView = true
+        draftTextView.textContainer?.containerSize = NSSize(width: minimumDraftFieldWidth, height: .greatestFiniteMagnitude)
+        draftTextView.minSize = NSSize(width: 0, height: height)
+        draftTextView.maxSize = NSSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        draftTextView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+
+        draftScrollView.translatesAutoresizingMaskIntoConstraints = false
+        draftScrollView.borderType = .bezelBorder
+        draftScrollView.hasVerticalScroller = false
+        draftScrollView.hasHorizontalScroller = false
+        draftScrollView.autohidesScrollers = true
+        draftScrollView.scrollerStyle = .overlay
+        draftScrollView.drawsBackground = true
+        draftScrollView.backgroundColor = .controlBackgroundColor
+        draftScrollView.documentView = draftTextView
     }
 
     @objc private func runAction(_ sender: NSButton) {
@@ -202,15 +320,124 @@ final class FloatingActionPanel: NSObject {
     }
 
     @objc private func runDraft() {
-        let request = draftField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let request = draftTextView.string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !request.isEmpty else { return }
-        draftField.stringValue = ""
+        draftTextView.string = ""
+        updatePanelSizeForDraftText()
         onDraftRequest?(request)
+    }
+
+    private func updatePanelSizeForDraftText() {
+        guard panel.contentView != nil else { return }
+
+        let scale = AppSettings.shared.popupTuning.popupScale
+        let singleLineText = draftTextView.string
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let displayText = singleLineText.isEmpty ? draftTextView.placeholderString : singleLineText
+        let font = draftTextView.font ?? .systemFont(ofSize: max(11.0, 12.0 * scale))
+        let measuredTextWidth = ceil((displayText as NSString).size(withAttributes: [.font: font]).width)
+        let desiredDraftFieldWidth = max(minimumDraftFieldWidth, measuredTextWidth + (18.0 * scale))
+
+        let defaultMaxPanelWidth = max(basePanelWidth, 560.0 * scale)
+        let screenMaxPanelWidth: CGFloat
+        if let screen = panel.screen {
+            screenMaxPanelWidth = max(basePanelWidth, screen.visibleFrame.width - 16)
+        } else {
+            screenMaxPanelWidth = defaultMaxPanelWidth
+        }
+
+        let desiredPanelWidth = min(
+            max(basePanelWidth, desiredDraftFieldWidth + draftButtonWidth + panelSpacing + (panelPadding * 2)),
+            min(screenMaxPanelWidth, defaultMaxPanelWidth)
+        )
+
+        let availableDraftWidth = max(
+            minimumDraftFieldWidth,
+            desiredPanelWidth - (panelPadding * 2) - panelSpacing - draftButtonWidth
+        )
+        let maxDraftHeight = preferredMaxDraftHeight(font: font, scale: scale)
+        let desiredDraftHeight = preferredDraftHeight(width: availableDraftWidth, font: font, maxDraftHeight: maxDraftHeight)
+        draftFieldHeightConstraint?.constant = desiredDraftHeight
+        draftScrollView.hasVerticalScroller = desiredDraftHeight >= maxDraftHeight - 0.5
+        draftTextView.scrollRangeToVisible(draftTextView.selectedRange())
+
+        let desiredPanelHeight = basePanelHeight - baseDraftFieldHeight + desiredDraftHeight
+        resizePanel(width: desiredPanelWidth, height: desiredPanelHeight)
+    }
+
+    private func preferredDraftHeight(width: CGFloat, font: NSFont, maxDraftHeight: CGFloat) -> CGFloat {
+        let measurementText = draftTextView.string.isEmpty ? " " : draftTextView.string
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byWordWrapping
+
+        let availableTextWidth = max(width - (draftTextView.textContainerInset.width * 2), 40)
+        let bounds = (measurementText as NSString).boundingRect(
+            with: NSSize(width: availableTextWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [
+                .font: font,
+                .paragraphStyle: paragraph
+            ]
+        )
+
+        let verticalInset = draftTextView.textContainerInset.height * 2
+        let contentHeight = ceil(bounds.height) + verticalInset
+        return min(max(contentHeight, baseDraftFieldHeight), maxDraftHeight)
+    }
+
+    private func preferredMaxDraftHeight(font: NSFont, scale: Double) -> CGFloat {
+        let lineHeight = ceil(font.ascender - font.descender + font.leading)
+        let verticalInset = draftTextView.textContainerInset.height * 2
+        return max(baseDraftFieldHeight, (lineHeight * maxVisibleDraftLines) + verticalInset + (2.0 * scale))
+    }
+
+    private func resizePanel(width: CGFloat, height: CGFloat) {
+        let oldFrame = panel.frame
+        guard oldFrame.width > 0, oldFrame.height > 0 else {
+            panel.setContentSize(NSSize(width: width, height: height))
+            return
+        }
+
+        guard abs(oldFrame.width - width) > 0.5 || abs(oldFrame.height - height) > 0.5 else {
+            return
+        }
+
+        var newFrame = oldFrame
+        newFrame.size = NSSize(width: width, height: height)
+        newFrame.origin.x = oldFrame.midX - (width / 2)
+        newFrame.origin.y = oldFrame.maxY - height
+
+        if let screen = panel.screen ?? NSScreen.main {
+            let visible = screen.visibleFrame.insetBy(dx: 8, dy: 8)
+            newFrame.origin.x = min(max(newFrame.origin.x, visible.minX), visible.maxX - width)
+            newFrame.origin.y = min(max(newFrame.origin.y, visible.minY), visible.maxY - height)
+        }
+
+        panel.setFrame(newFrame, display: true)
     }
 }
 
-extension FloatingActionPanel: NSTextFieldDelegate {
-    func controlTextDidBeginEditing(_ notification: Notification) {
+extension FloatingActionPanel: NSTextViewDelegate {
+    func textDidBeginEditing(_ notification: Notification) {
+        NSApp.activate(ignoringOtherApps: true)
         onDraftEditingBegan?()
+    }
+
+    func textDidChange(_ notification: Notification) {
+        updatePanelSizeForDraftText()
+    }
+
+    func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            if NSApp.currentEvent?.modifierFlags.contains(.shift) == true {
+                textView.insertText("\n", replacementRange: textView.selectedRange())
+            } else {
+                runDraft()
+            }
+            return true
+        }
+
+        return false
     }
 }
