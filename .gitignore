@@ -1,0 +1,25 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcuserdata/
+*.xcodeproj/
+*.xcworkspace/
+
+# Local IDE state
+.vscode/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.log
+*.key
+*.pem
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+
+# macOS / Xcode user state
+*.xcuserstate
+xcuserdata/
