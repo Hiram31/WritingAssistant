@@ -13,7 +13,63 @@ private final class SettingsWindow: NSWindow {
             return true
         }
 
+        if routeStandardEditingShortcut(event) {
+            return true
+        }
+
         return super.performKeyEquivalent(with: event)
+    }
+
+    private func routeStandardEditingShortcut(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+
+        if let textView = firstResponder as? NSTextView {
+            return textView.performStandardEditingShortcut(event)
+        }
+
+        if let control = firstResponder as? NSControl,
+           let editor = fieldEditor(false, for: control) as? NSTextView {
+            return editor.performStandardEditingShortcut(event)
+        }
+
+        return false
+    }
+}
+
+private extension NSTextView {
+    func performStandardEditingShortcut(_ event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard modifiers == .command || modifiers == [.command, .shift] else {
+            return false
+        }
+
+        guard let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return false
+        }
+
+        switch key {
+        case "a":
+            setSelectedRange(NSRange(location: 0, length: (string as NSString).length))
+            return true
+        case "c":
+            copy(nil)
+            return true
+        case "x":
+            cut(nil)
+            return true
+        case "v":
+            paste(nil)
+            return true
+        case "z":
+            if modifiers.contains(.shift) {
+                undoManager?.redo()
+            } else {
+                undoManager?.undo()
+            }
+            return true
+        default:
+            return false
+        }
     }
 }
 
