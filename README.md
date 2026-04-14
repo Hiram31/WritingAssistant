@@ -59,6 +59,32 @@ swift run WritingAssistant
 
 On first launch, click the WritingAssistant menu bar icon, choose `Settings...`, then configure the `AI` tab.
 
+## 📦 Build A Release DMG
+
+Generate the app icon assets from the SVG source:
+
+```sh
+scripts/generate_app_icon.sh
+```
+
+Build an ad-hoc signed `.app` bundle and DMG:
+
+```sh
+scripts/build_dmg.sh 1.0.0
+```
+
+The release artifact is written to:
+
+```text
+dist/WritingAssistant-1.0.0.dmg
+```
+
+By default, the script uses free ad-hoc signing. For a Developer ID release, pass your signing identity through `SIGN_IDENTITY`:
+
+```sh
+SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" scripts/build_dmg.sh 1.0.0
+```
+
 ## 🤖 AI Providers
 
 WritingAssistant keeps the provider list intentionally simple:

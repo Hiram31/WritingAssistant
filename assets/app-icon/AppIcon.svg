@@ -1,0 +1,83 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="base" x1="166" y1="128" x2="858" y2="896" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F4FFF9"/>
+      <stop offset="0.48" stop-color="#D5F8EC"/>
+      <stop offset="1" stop-color="#A9DDF7"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="330" y1="216" x2="684" y2="792" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F0F7F6"/>
+    </linearGradient>
+    <linearGradient id="highlight" x1="306" y1="466" x2="716" y2="466" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#31D0B7"/>
+      <stop offset="1" stop-color="#3D9CFF"/>
+    </linearGradient>
+    <linearGradient id="toolbar" x1="270" y1="682" x2="758" y2="822" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#122F35"/>
+      <stop offset="1" stop-color="#235B64"/>
+    </linearGradient>
+    <filter id="baseShadow" x="46" y="58" width="932" height="934" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="26" flood-color="#12343A" flood-opacity="0.18"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#12343A" flood-opacity="0.12"/>
+    </filter>
+    <filter id="paperShadow" x="194" y="156" width="636" height="736" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#14343A" flood-opacity="0.16"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#14343A" flood-opacity="0.10"/>
+    </filter>
+    <filter id="toolbarShadow" x="214" y="642" width="604" height="242" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#102D33" flood-opacity="0.24"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#102D33" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" fill="none"/>
+
+  <g filter="url(#baseShadow)">
+    <rect x="92" y="92" width="840" height="840" rx="188" fill="url(#base)"/>
+    <rect x="110" y="110" width="804" height="804" rx="170" stroke="#FFFFFF" stroke-width="20" stroke-opacity="0.78"/>
+  </g>
+
+  <path d="M184 324C274 254 374 224 484 234C596 244 696 218 838 150" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-opacity="0.48"/>
+  <path d="M164 780C282 680 396 654 518 704C650 758 756 722 868 606" stroke="#6FC9D4" stroke-width="14" stroke-linecap="round" stroke-opacity="0.30"/>
+
+  <g filter="url(#paperShadow)">
+    <rect x="248" y="194" width="528" height="628" rx="72" fill="url(#paper)"/>
+    <path d="M638 194H704C743.765 194 776 226.235 776 266V326L638 194Z" fill="#D9F0EA"/>
+    <path d="M638 194V294C638 311.673 652.327 326 670 326H776L638 194Z" fill="#BFE8E0"/>
+
+    <rect x="306" y="324" width="276" height="28" rx="14" fill="#6C858D" fill-opacity="0.54"/>
+    <rect x="306" y="384" width="388" height="26" rx="13" fill="#8BA2A9" fill-opacity="0.42"/>
+
+    <rect x="306" y="436" width="410" height="92" rx="34" fill="url(#highlight)"/>
+    <rect x="346" y="462" width="254" height="24" rx="12" fill="#FFFFFF" fill-opacity="0.92"/>
+    <rect x="346" y="498" width="188" height="18" rx="9" fill="#FFFFFF" fill-opacity="0.54"/>
+    <path d="M650 448V516" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-opacity="0.90"/>
+
+    <rect x="306" y="574" width="346" height="26" rx="13" fill="#8BA2A9" fill-opacity="0.34"/>
+    <rect x="306" y="632" width="282" height="26" rx="13" fill="#8BA2A9" fill-opacity="0.28"/>
+    <rect x="306" y="690" width="322" height="26" rx="13" fill="#8BA2A9" fill-opacity="0.22"/>
+  </g>
+
+  <g filter="url(#toolbarShadow)">
+    <rect x="270" y="676" width="488" height="148" rx="54" fill="url(#toolbar)"/>
+    <rect x="292" y="698" width="444" height="104" rx="40" stroke="#FFFFFF" stroke-width="4" stroke-opacity="0.12"/>
+
+    <rect x="322" y="716" width="112" height="68" rx="30" fill="#FFFFFF"/>
+    <path d="M356 750L376 770L406 730" stroke="#122F35" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="458" y="716" width="112" height="68" rx="30" fill="#36D3BE"/>
+    <path d="M514 727L522 743L540 750L522 757L514 773L506 757L488 750L506 743L514 727Z" fill="#123238"/>
+
+    <rect x="594" y="716" width="112" height="68" rx="30" fill="#FF6878"/>
+    <path d="M632 750H668" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+    <path d="M650 732V768" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round"/>
+  </g>
+
+  <path d="M782 252L801 296L846 314L801 332L782 378L764 332L718 314L764 296L782 252Z" fill="#FFFFFF"/>
+  <path d="M782 282L791 306L816 314L791 324L782 350L772 324L748 314L772 306L782 282Z" fill="#31D0B7"/>
+
+  <path d="M220 360L231 386L258 396L231 407L220 434L209 407L182 396L209 386L220 360Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <circle cx="812" cy="570" r="18" fill="#FFFFFF" fill-opacity="0.95"/>
+  <circle cx="226" cy="644" r="16" fill="#3D9CFF" fill-opacity="0.72"/>
+</svg>

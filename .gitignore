@@ -1,6 +1,21 @@
 .DS_Store
+
+# SwiftPM / build output
 .build/
+.swiftpm/
 DerivedData/
+
+# Release artifacts
+dist/
+*.app/
+*.dmg
+*.xcarchive/
+*.dSYM/
+
+# Generated icon intermediates
+assets/app-icon/*.iconset/
+
+# Xcode project state
 *.xcuserdata/
 *.xcodeproj/
 *.xcworkspace/
@@ -19,7 +34,13 @@ DerivedData/
 *.cer
 *.mobileprovision
 *.provisionprofile
+__pycache__/
+*.py[cod]
 
 # macOS / Xcode user state
 *.xcuserstate
 xcuserdata/
+
+# Editor swap files
+*.swp
+*.swo
