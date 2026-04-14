@@ -23,7 +23,10 @@ final class SelectionReader {
         )
     }
 
-    func readSelectedText(completion: @escaping (SelectionContext?) -> Void) {
+    func readSelectedText(
+        allowClipboardFallback: Bool = true,
+        completion: @escaping (SelectionContext?) -> Void
+    ) {
         let sourceApplication = NSWorkspace.shared.frontmostApplication
         let focusedElement = currentFocusedElement()
         let appName = sourceApplication?.localizedName ?? "unknown"
@@ -39,6 +42,12 @@ final class SelectionReader {
                 focusedElement: focusedElement,
                 sourceApplication: sourceApplication
             ))
+            return
+        }
+
+        guard allowClipboardFallback else {
+            AppLog.info("Accessibility selected text unavailable and clipboard fallback is disabled for this trigger.")
+            completion(nil)
             return
         }
 

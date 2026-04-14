@@ -185,7 +185,8 @@ final class SelectionController {
             return
         }
 
-        reader.readSelectedText { [weak self] context in
+        let allowClipboardFallback = trigger == .hotkey
+        reader.readSelectedText(allowClipboardFallback: allowClipboardFallback) { [weak self] context in
             guard let self else { return }
 
             guard let context else {
