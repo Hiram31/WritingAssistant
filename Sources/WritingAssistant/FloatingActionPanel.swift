@@ -81,7 +81,9 @@ final class FloatingActionPanel: NSObject {
     private let panel: NSPanel
     private let draftTextView = DraftInputTextView()
     private let draftScrollView = NSScrollView()
+    private let resultTextView = NSTextView()
     private var displayedActions: [RewriteAction] = []
+    private var lastAnchorPoint: NSPoint?
     private var panelPadding: CGFloat = 0
     private var panelSpacing: CGFloat = 0
     private var basePanelWidth: CGFloat = 0
@@ -110,7 +112,27 @@ final class FloatingActionPanel: NSObject {
     }
 
     func show(near point: NSPoint, focusDraftField: Bool = false) {
+        lastAnchorPoint = point
         configureContent()
+        positionPanel(near: point)
+
+        panel.orderFrontRegardless()
+        if focusDraftField {
+            panel.makeKey()
+            panel.makeFirstResponder(draftTextView)
+        }
+    }
+
+    func showResult(_ text: String, title: String) {
+        configureResultContent(text: text, title: title)
+        let anchor = lastAnchorPoint ?? NSPoint(x: panel.frame.midX, y: panel.frame.minY)
+        positionPanel(near: anchor)
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        panel.makeFirstResponder(resultTextView)
+    }
+
+    private func positionPanel(near point: NSPoint) {
 
         let tuning = AppSettings.shared.popupTuning
         let size = panel.frame.size
@@ -155,11 +177,6 @@ final class FloatingActionPanel: NSObject {
         y = min(max(y, visibleFrame.minY + 8), visibleFrame.maxY - size.height - 8)
 
         panel.setFrameOrigin(NSPoint(x: x, y: y))
-        panel.orderFrontRegardless()
-        if focusDraftField {
-            panel.makeKey()
-            panel.makeFirstResponder(draftTextView)
-        }
     }
 
     func hide() {
@@ -211,10 +228,19 @@ final class FloatingActionPanel: NSObject {
         effectView.translatesAutoresizingMaskIntoConstraints = false
 
         let buttons = actions.enumerated().map { index, action in
-            let button = NSButton(title: action.shortTitle, target: self, action: #selector(runAction(_:)))
+            let button = NSButton(title: "", target: self, action: #selector(runAction(_:)))
             button.translatesAutoresizingMaskIntoConstraints = false
             button.tag = index
             button.toolTip = action.tooltip
+            button.setAccessibilityLabel(action.tooltip)
+            if let systemImageName = action.systemImageName,
+               let image = NSImage(systemSymbolName: systemImageName, accessibilityDescription: action.tooltip) {
+                button.image = image
+                button.imagePosition = .imageOnly
+                button.imageScaling = .scaleProportionallyDown
+            } else {
+                button.title = action.shortTitle
+            }
             configureButton(button)
             button.widthAnchor.constraint(equalToConstant: buttonWidth).isActive = true
             button.heightAnchor.constraint(equalToConstant: buttonHeight).isActive = true
@@ -276,6 +302,137 @@ final class FloatingActionPanel: NSObject {
         button.bezelStyle = .rounded
         button.setButtonType(.momentaryPushIn)
         button.font = .systemFont(ofSize: max(10.0, 11.0 * AppSettings.shared.popupTuning.popupScale), weight: .medium)
+    }
+
+    private func configureResultContent(text: String, title: String) {
+        let scale = AppSettings.shared.popupTuning.popupScale
+        let width = max(360.0, 420.0 * scale)
+        let height = max(210.0, 240.0 * scale)
+        let padding = max(10.0, 12.0 * scale)
+        let buttonSize = max(26.0, 28.0 * scale)
+
+        panel.setContentSize(NSSize(width: width, height: height))
+
+        let effectView = NSVisualEffectView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        effectView.material = .hudWindow
+        effectView.blendingMode = .behindWindow
+        effectView.state = .active
+        effectView.wantsLayer = true
+        effectView.layer?.cornerRadius = 10
+        effectView.layer?.masksToBounds = true
+
+        let titleLabel = NSTextField(labelWithString: title)
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = .systemFont(ofSize: max(12.0, 13.0 * scale), weight: .semibold)
+        titleLabel.textColor = .labelColor
+        titleLabel.lineBreakMode = .byTruncatingTail
+
+        let copyButton = resultButton(
+            systemImageName: "doc.on.doc",
+            fallbackTitle: "Copy",
+            toolTip: "Copy translation",
+            action: #selector(copyResult)
+        )
+        let closeButton = resultButton(
+            systemImageName: "xmark",
+            fallbackTitle: "Close",
+            toolTip: "Close translation",
+            action: #selector(closeResult)
+        )
+
+        resultTextView.string = text
+        resultTextView.font = .systemFont(ofSize: max(13.0, 14.0 * scale))
+        resultTextView.textColor = .labelColor
+        resultTextView.drawsBackground = false
+        resultTextView.isEditable = false
+        resultTextView.isSelectable = true
+        resultTextView.isRichText = false
+        resultTextView.isHorizontallyResizable = false
+        resultTextView.isVerticallyResizable = true
+        resultTextView.autoresizingMask = [.width]
+        resultTextView.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: width - (padding * 2),
+            height: height - buttonSize - (padding * 3)
+        )
+        resultTextView.minSize = NSSize(width: 0, height: 0)
+        resultTextView.maxSize = NSSize(
+            width: CGFloat.greatestFiniteMagnitude,
+            height: CGFloat.greatestFiniteMagnitude
+        )
+        resultTextView.textContainerInset = NSSize(width: 7.0 * scale, height: 7.0 * scale)
+        resultTextView.textContainer?.lineFragmentPadding = 0
+        resultTextView.textContainer?.widthTracksTextView = true
+        resultTextView.textContainer?.containerSize = NSSize(
+            width: width - (padding * 2),
+            height: CGFloat.greatestFiniteMagnitude
+        )
+
+        let scrollView = NSScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.borderType = .bezelBorder
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.scrollerStyle = .overlay
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = .controlBackgroundColor
+        scrollView.documentView = resultTextView
+
+        panel.contentView = effectView
+        [titleLabel, copyButton, closeButton, scrollView].forEach(effectView.addSubview)
+
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: effectView.leadingAnchor, constant: padding),
+            titleLabel.centerYAnchor.constraint(equalTo: copyButton.centerYAnchor),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: copyButton.leadingAnchor, constant: -8),
+
+            closeButton.topAnchor.constraint(equalTo: effectView.topAnchor, constant: padding),
+            closeButton.trailingAnchor.constraint(equalTo: effectView.trailingAnchor, constant: -padding),
+            closeButton.widthAnchor.constraint(equalToConstant: buttonSize),
+            closeButton.heightAnchor.constraint(equalToConstant: buttonSize),
+
+            copyButton.topAnchor.constraint(equalTo: closeButton.topAnchor),
+            copyButton.trailingAnchor.constraint(equalTo: closeButton.leadingAnchor, constant: -6),
+            copyButton.widthAnchor.constraint(equalToConstant: buttonSize),
+            copyButton.heightAnchor.constraint(equalToConstant: buttonSize),
+
+            scrollView.leadingAnchor.constraint(equalTo: effectView.leadingAnchor, constant: padding),
+            scrollView.trailingAnchor.constraint(equalTo: effectView.trailingAnchor, constant: -padding),
+            scrollView.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: 8),
+            scrollView.bottomAnchor.constraint(equalTo: effectView.bottomAnchor, constant: -padding)
+        ])
+    }
+
+    private func resultButton(
+        systemImageName: String,
+        fallbackTitle: String,
+        toolTip: String,
+        action: Selector
+    ) -> NSButton {
+        let button = NSButton(title: "", target: self, action: action)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.bezelStyle = .rounded
+        button.toolTip = toolTip
+        button.setAccessibilityLabel(toolTip)
+        if let image = NSImage(systemSymbolName: systemImageName, accessibilityDescription: toolTip) {
+            button.image = image
+            button.imagePosition = .imageOnly
+        } else {
+            button.title = fallbackTitle
+        }
+        return button
+    }
+
+    @objc private func copyResult() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(resultTextView.string, forType: .string)
+    }
+
+    @objc private func closeResult() {
+        hide()
     }
 
     private func configureDraftField(scale: Double, height: CGFloat) {

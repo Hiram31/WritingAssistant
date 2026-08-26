@@ -361,6 +361,11 @@ final class AppSettings {
         set { setString(newValue, for: Keys.academicInstructions, fallback: Defaults.academicInstructions) }
     }
 
+    var englishToChineseInstructions: String {
+        get { string(for: Keys.englishToChineseInstructions) ?? Defaults.englishToChineseInstructions }
+        set { setString(newValue, for: Keys.englishToChineseInstructions, fallback: Defaults.englishToChineseInstructions) }
+    }
+
     var draftInstructions: String {
         get { string(for: Keys.draftInstructions) ?? Defaults.draftInstructions }
         set { setString(newValue, for: Keys.draftInstructions, fallback: Defaults.draftInstructions) }
@@ -372,7 +377,14 @@ final class AppSettings {
                 return BuiltInTune.allCases.map(\.id)
             }
             let validIDs = Set(BuiltInTune.allCases.map(\.id))
-            let filtered = value.filter { validIDs.contains($0) }
+            var filtered = value.filter { validIDs.contains($0) }
+            if !defaults.bool(forKey: Keys.englishToChineseActionMigrated) {
+                if !filtered.contains(BuiltInTune.englishToChinese.id) {
+                    filtered.append(BuiltInTune.englishToChinese.id)
+                }
+                defaults.set(filtered, forKey: Keys.enabledBuiltInActionIDs)
+                defaults.set(true, forKey: Keys.englishToChineseActionMigrated)
+            }
             return filtered.isEmpty ? [BuiltInTune.grammar.id] : filtered
         }
         set {
@@ -382,6 +394,7 @@ final class AppSettings {
                 filtered = [BuiltInTune.grammar.id]
             }
             defaults.set(filtered, forKey: Keys.enabledBuiltInActionIDs)
+            defaults.set(true, forKey: Keys.englishToChineseActionMigrated)
         }
     }
 
@@ -403,9 +416,12 @@ final class AppSettings {
     var rewriteActions: [RewriteAction] {
         let enabledIDs = Set(enabledBuiltInActionIDs)
         let builtIns = BuiltInTune.allCases
-            .filter { enabledIDs.contains($0.id) }
+            .filter { $0 != .englishToChinese && enabledIDs.contains($0.id) }
             .map { $0.rewriteAction(settings: self) }
-        return builtIns + customTunes.map(\.rewriteAction)
+        let translation = enabledIDs.contains(BuiltInTune.englishToChinese.id)
+            ? [BuiltInTune.englishToChinese.rewriteAction(settings: self)]
+            : []
+        return builtIns + customTunes.map(\.rewriteAction) + translation
     }
 
     var hasAzureConfiguration: Bool {
@@ -527,8 +543,10 @@ final class AppSettings {
         defaults.removeObject(forKey: Keys.formalPartnersInstructions)
         defaults.removeObject(forKey: Keys.fluencyInstructions)
         defaults.removeObject(forKey: Keys.academicInstructions)
+        defaults.removeObject(forKey: Keys.englishToChineseInstructions)
         defaults.removeObject(forKey: Keys.draftInstructions)
         defaults.removeObject(forKey: Keys.enabledBuiltInActionIDs)
+        defaults.removeObject(forKey: Keys.englishToChineseActionMigrated)
         notifyChanged()
     }
 
@@ -686,6 +704,7 @@ enum BuiltInTune: String, CaseIterable {
     case formalPartners
     case fluency
     case academic
+    case englishToChinese
 
     var id: String {
         switch self {
@@ -699,6 +718,8 @@ enum BuiltInTune: String, CaseIterable {
             return "fluency"
         case .academic:
             return "academic"
+        case .englishToChinese:
+            return "english-to-chinese"
         }
     }
 
@@ -714,6 +735,8 @@ enum BuiltInTune: String, CaseIterable {
             return "Fluency"
         case .academic:
             return "Academic"
+        case .englishToChinese:
+            return "English to Chinese"
         }
     }
 
@@ -729,6 +752,17 @@ enum BuiltInTune: String, CaseIterable {
             return "Flu"
         case .academic:
             return "Acd"
+        case .englishToChinese:
+            return "中"
+        }
+    }
+
+    var systemImageName: String? {
+        switch self {
+        case .englishToChinese:
+            return "character.book.closed.fill"
+        default:
+            return nil
         }
     }
 
@@ -744,6 +778,8 @@ enum BuiltInTune: String, CaseIterable {
             return "Natural coworker chat"
         case .academic:
             return "Academic review or journal writing"
+        case .englishToChinese:
+            return "Translate English into Simplified Chinese"
         }
     }
 
@@ -759,6 +795,8 @@ enum BuiltInTune: String, CaseIterable {
             return settings.fluencyInstructions
         case .academic:
             return settings.academicInstructions
+        case .englishToChinese:
+            return settings.englishToChineseInstructions
         }
     }
 
@@ -768,8 +806,10 @@ enum BuiltInTune: String, CaseIterable {
             title: id,
             displayTitle: displayTitle,
             shortTitle: shortTitle,
+            systemImageName: systemImageName,
             tooltip: tooltip,
-            instructions: instructions(settings: settings)
+            instructions: instructions(settings: settings),
+            resultPresentation: self == .englishToChinese ? .displayInPanel : .replaceSelection
         )
     }
 }
@@ -786,8 +826,10 @@ struct CustomTune: Codable, Equatable {
             title: "custom-\(id)",
             displayTitle: name,
             shortTitle: shortLabel,
+            systemImageName: nil,
             tooltip: name,
-            instructions: instructions
+            instructions: instructions,
+            resultPresentation: .replaceSelection
         )
     }
 
@@ -1209,8 +1251,10 @@ private enum Keys {
     static let formalPartnersInstructions = "prompts.formalPartners"
     static let fluencyInstructions = "prompts.fluency"
     static let academicInstructions = "prompts.academic"
+    static let englishToChineseInstructions = "prompts.englishToChinese"
     static let draftInstructions = "prompts.draft"
     static let enabledBuiltInActionIDs = "prompts.enabledBuiltInActionIDs"
+    static let englishToChineseActionMigrated = "prompts.englishToChineseActionMigrated"
     static let customTunes = "prompts.customTunes"
 
     static let allUserDefaultKeys = [
@@ -1257,8 +1301,10 @@ private enum Keys {
         formalPartnersInstructions,
         fluencyInstructions,
         academicInstructions,
+        englishToChineseInstructions,
         draftInstructions,
         enabledBuiltInActionIDs,
+        englishToChineseActionMigrated,
         customTunes
     ]
 }
@@ -1296,6 +1342,12 @@ private enum Defaults {
     If the text is from a reviewer, make it professional, precise, constructive, and appropriate for review comments to editors or authors in applied AI, technology, engineering, or related journals.
     If the text is from a journal author, make it scholarly, clear, concise, and appropriate for manuscript, response letter, rebuttal, cover letter, or editorial communication.
     Preserve the original meaning and technical nuance. Return only the rewritten text. Do not explain the changes.
+    """
+
+    static let englishToChineseInstructions = """
+    Translate the selected English text into natural, accurate Simplified Chinese.
+    Preserve the original meaning, tone, formatting, paragraph breaks, names, numbers, and technical nuance. Keep product names and technical terms in English when that is clearer or conventional in Chinese.
+    Return only the Chinese translation. Do not explain the translation and do not wrap it in quotes.
     """
 
     static let draftInstructions = """
@@ -1350,6 +1402,7 @@ private enum Defaults {
         Keys.formalPartnersInstructions: formalPartnersInstructions,
         Keys.fluencyInstructions: fluencyInstructions,
         Keys.academicInstructions: academicInstructions,
+        Keys.englishToChineseInstructions: englishToChineseInstructions,
         Keys.draftInstructions: draftInstructions
     ]
 }

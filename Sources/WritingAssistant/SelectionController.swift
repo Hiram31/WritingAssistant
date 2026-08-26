@@ -224,11 +224,18 @@ final class SelectionController {
 
         Task {
             do {
-                let replacement = try await rewriter.process(context.text, action: action)
+                let output = try await rewriter.process(context.text, action: action)
                 await MainActor.run {
-                    replacer.replaceSelection(with: replacement, context: context) { [weak self] in
-                        AppLog.info("Action completed action=\(action.title), replacement \(AppLog.describeText(replacement))")
-                        self?.onStatusChange?(.replaced)
+                    switch action.resultPresentation {
+                    case .replaceSelection:
+                        replacer.replaceSelection(with: output, context: context) { [weak self] in
+                            AppLog.info("Action completed action=\(action.title), replacement \(AppLog.describeText(output))")
+                            self?.onStatusChange?(.replaced)
+                        }
+                    case .displayInPanel:
+                        AppLog.info("Action completed action=\(action.title), displayedResult \(AppLog.describeText(output))")
+                        panel.showResult(output, title: action.displayTitle)
+                        onStatusChange?(.ready)
                     }
                 }
             } catch {

@@ -8,7 +8,7 @@ Select text in Gmail, Slack, a browser, an editor, or a document. A compact floa
 
 1. Select text anywhere you write.
 2. A small floating palette appears next to the selection.
-3. Click `Fix`, `Sup`, `Par`, `Flu`, `Acd`, or one of your own custom styles.
+3. Click `Fix`, `Sup`, `Par`, `Flu`, `Acd`, <img src="assets/translation-icon.png" alt="Translate to Chinese" width="18">, or one of your own custom styles.
 4. WritingAssistant sends the request to your selected AI provider.
 5. The selected text is replaced in place, or a new draft is pasted where your cursor was.
 
@@ -24,6 +24,7 @@ Select text in Gmail, Slack, a browser, an editor, or a document. A compact floa
 - 📝 **One-click cleanup**: fix grammar, spelling, punctuation, clarity, and awkward phrasing.
 - 🎩 **Tone-specific rewrites**: switch between supervisor-ready, partner-facing, coworker-chat, and academic styles.
 - 🎓 **Academic polish**: tune reviewer comments, author responses, rebuttal letters, manuscript text, and editor communication.
+- 🌏 **English-to-Chinese translation**: view a natural Simplified Chinese translation without changing the selected English text.
 - 🧩 **Custom writing styles**: add, remove, enable, disable, and edit your own prompt-driven buttons.
 - 🪄 **Draft composer**: type `compose an email asking the supplier for status` and paste a complete draft into the current app.
 - 🧠 **Prompt control**: edit every built-in tune plus the draft composer prompt from Settings.
@@ -252,6 +253,7 @@ Floating popup actions:
 - `Par`: formal rewrite from a client or business contact to external partners.
 - `Flu`: natural daily coworker chat.
 - `Acd`: academic journal review comments, author responses, manuscript text, or editor/author communication.
+- <img src="assets/translation-icon.png" alt="Translate to Chinese" width="18">: show a selectable, copyable Simplified Chinese translation in the popup without replacing the selected English text. The icon stays at the end of the action row.
 - Custom styles: add your own name, short popup label, and prompt in `Settings... -> Prompts -> + Add Style`.
 
 Default tunes can be removed from the popup by unchecking `Show in popup` beside that prompt in `Settings... -> Prompts`. The prompt text remains saved, so you can re-enable it later.

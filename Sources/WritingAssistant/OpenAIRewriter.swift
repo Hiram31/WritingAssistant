@@ -1,12 +1,19 @@
 import Foundation
 
+enum RewriteResultPresentation {
+    case replaceSelection
+    case displayInPanel
+}
+
 struct RewriteAction {
     let id: String
     let title: String
     let displayTitle: String
     let shortTitle: String
+    let systemImageName: String?
     let tooltip: String
     let instructions: String
+    let resultPresentation: RewriteResultPresentation
 
     static var grammar: RewriteAction {
         BuiltInTune.grammar.rewriteAction(settings: AppSettings.shared)
@@ -259,8 +266,10 @@ final class OpenAIRewriter {
             title: "draft",
             displayTitle: "Draft",
             shortTitle: "Send",
+            systemImageName: nil,
             tooltip: "Generate a new draft",
-            instructions: AppSettings.shared.draftInstructions
+            instructions: AppSettings.shared.draftInstructions,
+            resultPresentation: .replaceSelection
         )
 
         return try await process(request, action: action)

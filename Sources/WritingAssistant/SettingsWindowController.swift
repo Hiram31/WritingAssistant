@@ -118,12 +118,14 @@ final class SettingsWindowController: NSWindowController {
     private let formalPartnersPromptView = NSTextView()
     private let fluencyPromptView = NSTextView()
     private let academicPromptView = NSTextView()
+    private let englishToChinesePromptView = NSTextView()
     private let draftPromptView = NSTextView()
     private let grammarEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
     private let formalSupervisorEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
     private let formalPartnersEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
     private let fluencyEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
     private let academicEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
+    private let englishToChineseEnabledButton = NSButton(checkboxWithTitle: "Show in popup", target: nil, action: nil)
     private let customTuneStack = NSStackView()
     private var customTuneEditors: [CustomTuneEditor] = []
     private let statusLabel = NSTextField(labelWithString: "")
@@ -426,6 +428,7 @@ final class SettingsWindowController: NSWindowController {
         configurePromptView(formalPartnersPromptView)
         configurePromptView(fluencyPromptView)
         configurePromptView(academicPromptView)
+        configurePromptView(englishToChinesePromptView)
         configurePromptView(draftPromptView)
 
         customTuneStack.orientation = .vertical
@@ -452,6 +455,7 @@ final class SettingsWindowController: NSWindowController {
                 builtInPromptRow("Partners", formalPartnersPromptView, formalPartnersEnabledButton),
                 builtInPromptRow("Fluency", fluencyPromptView, fluencyEnabledButton),
                 builtInPromptRow("Academic", academicPromptView, academicEnabledButton),
+                builtInPromptRow("English to Chinese", englishToChinesePromptView, englishToChineseEnabledButton),
                 promptRow("Draft composer", draftPromptView, help: "System instructions for generating new text from the draft field."),
                 customTuneStack,
                 trailingRow(buttonRow)
@@ -698,6 +702,7 @@ final class SettingsWindowController: NSWindowController {
         formalPartnersPromptView.string = settings.formalPartnersInstructions
         fluencyPromptView.string = settings.fluencyInstructions
         academicPromptView.string = settings.academicInstructions
+        englishToChinesePromptView.string = settings.englishToChineseInstructions
         draftPromptView.string = settings.draftInstructions
         loadBuiltInTuneVisibility()
         reloadCustomTuneEditors(settings.customTunes)
@@ -760,6 +765,7 @@ final class SettingsWindowController: NSWindowController {
         settings.formalPartnersInstructions = formalPartnersPromptView.string
         settings.fluencyInstructions = fluencyPromptView.string
         settings.academicInstructions = academicPromptView.string
+        settings.englishToChineseInstructions = englishToChinesePromptView.string
         settings.draftInstructions = draftPromptView.string
         settings.enabledBuiltInActionIDs = selectedBuiltInTuneIDs()
         settings.customTunes = customTuneEditors.map { customTuneValue(from: $0) }
@@ -898,6 +904,7 @@ final class SettingsWindowController: NSWindowController {
         formalPartnersEnabledButton.state = enabledIDs.contains(BuiltInTune.formalPartners.id) ? .on : .off
         fluencyEnabledButton.state = enabledIDs.contains(BuiltInTune.fluency.id) ? .on : .off
         academicEnabledButton.state = enabledIDs.contains(BuiltInTune.academic.id) ? .on : .off
+        englishToChineseEnabledButton.state = enabledIDs.contains(BuiltInTune.englishToChinese.id) ? .on : .off
     }
 
     private func selectedBuiltInTuneIDs() -> [String] {
@@ -907,6 +914,7 @@ final class SettingsWindowController: NSWindowController {
         if formalPartnersEnabledButton.state == .on { ids.append(BuiltInTune.formalPartners.id) }
         if fluencyEnabledButton.state == .on { ids.append(BuiltInTune.fluency.id) }
         if academicEnabledButton.state == .on { ids.append(BuiltInTune.academic.id) }
+        if englishToChineseEnabledButton.state == .on { ids.append(BuiltInTune.englishToChinese.id) }
         return ids
     }
 
